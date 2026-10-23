@@ -1,0 +1,31 @@
+# ---- 构建产物 ----
+build/
+cmake-build-*/
+out/
+bin/
+lib/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.exe
+*.out
+
+# ---- IDE / 编辑器 ----
+.vscode/
+.idea/
+*.user
+*.suo
+*.swp
+.DS_Store
+
+# ---- 案例二进制（可由 generate_cases 重建）----
+data/cases/*.bin
+# 但保留目录占位，见下方 .gitkeep 说明
+
+# ---- 临时输出 ----
+dump_*.txt
+*.log
+tmp/
