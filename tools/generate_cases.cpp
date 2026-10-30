@@ -8,12 +8,7 @@
 #include <string>
 #include <iomanip>
 
-// 补齐 5 位数字，例如 0 -> "00000"
-std::string pad5(int x) {
-    std::ostringstream oss;
-    oss << std::setw(5) << std::setfill('0') << x;
-    return oss.str();
-}
+
 
 // 生成 100 种 (N, M, K) 组合
 std::vector<std::tuple<int,int,int>> makeCombos() {

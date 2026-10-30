@@ -26,6 +26,7 @@ add_library(airport_core STATIC
     src/backtracking.cpp
     src/branch_bound.cpp
     src/heuristic.cpp
+    src/utils.cpp
 )
 
 target_include_directories(airport_core
@@ -50,21 +51,25 @@ target_link_libraries(dump_case PRIVATE airport_core)
 add_executable(validate_all tools/validate_all.cpp)
 target_link_libraries(validate_all PRIVATE airport_core)
 
+add_executable(benchmark tools/benchmark.cpp)
+target_link_libraries(benchmark PRIVATE airport_core)
+
 # ---- 让运行目录下有 data/ ----
 # 程序里用相对路径 "data/..."，相对于进程工作目录。
 # 这里把源码树的 data/ 结构准备到构建目录，保证 cd build && ./bin/xxx 可直接运行。
-
 add_custom_target(prepare_data ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory
+            ${CMAKE_BINARY_DIR}/data
+    # 创建软链接，让 build/data/cases 指向源码目录的 data/cases
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+            ${CMAKE_CURRENT_SOURCE_DIR}/data/cases
             ${CMAKE_BINARY_DIR}/data/cases
-    COMMENT "准备构建目录下的 data/ 结构"
-)
-
-# 只让需要读 data/ 的目标依赖它；generate_cases 也写 data/cases/，所以同样依赖
+    COMMENT "为构建目录创建 data/cases 软链接"
+) # 只让需要读 data/ 的目标依赖它；generate_cases 也写 data/cases/，所以同样依赖
 add_dependencies(generate_cases prepare_data)
 add_dependencies(dump_case      prepare_data)
 add_dependencies(validate_all   prepare_data)
-
+add_dependencies(benchmark      prepare_data)
 # ---- 可选：测试 ----
 enable_testing()
 # add_test(NAME smoke COMMAND validate_all WORKING_DIRECTORY ${CMAKE_BINARY_DIR})

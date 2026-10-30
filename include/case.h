@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-
+#include <string>
 struct Stand {
     int id;
     bool isBridge;      // true=靠桥, false=远端

@@ -1,7 +1,8 @@
 #include "io.h"
 #include <fstream>
 #include <iostream>
-
+#include <sstream>
+#include <iomanip>
 bool validateCase(const Case& c, std::string& err) {
     if (c.stands.size() != static_cast<size_t>(c.N + c.M)) { err = "停机位数量不匹配"; return false; }
     if (c.planes.size() != static_cast<size_t>(c.K)) { err = "飞机数量不匹配"; return false; }
@@ -47,4 +48,45 @@ void saveCase(const Case& c, const std::string& path) {
         out.write((char*)&p.isLarge, sizeof(bool));
         out.write((char*)&p.passengers, sizeof(int));
     }
+}
+
+// 辅助补零函数
+std::string pad5(int x) {
+    std::ostringstream oss;
+    oss << std::setw(5) << std::setfill('0') << x;
+    return oss.str();
+}
+
+Case loadCase(int caseId, const std::string& dir) {
+    std::string path = dir + "/case_" + pad5(caseId) + ".bin";
+    std::ifstream in(path, std::ios::binary);
+    Case c;
+    if (!in) {
+        std::cerr << "无法打开案例文件: " << path << "\n";
+        return c;
+    }
+
+    in.read((char*)&c.caseId, sizeof(int));
+    in.read((char*)&c.N, sizeof(int));
+    in.read((char*)&c.M, sizeof(int));
+    in.read((char*)&c.K, sizeof(int));
+
+    c.stands.resize(c.N + c.M);
+    for (auto& s : c.stands) {
+        in.read((char*)&s.id, sizeof(int));
+        in.read((char*)&s.isBridge, sizeof(bool));
+        in.read((char*)&s.isLarge, sizeof(bool));
+        in.read((char*)&s.unloadTime, sizeof(int));
+    }
+
+    c.planes.resize(c.K);
+    for (auto& p : c.planes) {
+        in.read((char*)&p.id, sizeof(int));
+        in.read((char*)&p.arrive, sizeof(int));
+        in.read((char*)&p.depart, sizeof(int));
+        in.read((char*)&p.isLarge, sizeof(bool));
+        in.read((char*)&p.passengers, sizeof(int));
+    }
+
+    return c;
 }
