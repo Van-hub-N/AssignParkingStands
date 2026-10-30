@@ -57,10 +57,7 @@ target_link_libraries(validate_all PRIVATE airport_core)
 add_custom_target(prepare_data ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory
             ${CMAKE_BINARY_DIR}/data/cases
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_CURRENT_SOURCE_DIR}/data/combos.csv
-            ${CMAKE_BINARY_DIR}/data/combos.csv
-    COMMENT "准备构建目录下的 data/"
+    COMMENT "准备构建目录下的 data/ 结构"
 )
 
 # 只让需要读 data/ 的目标依赖它；generate_cases 也写 data/cases/，所以同样依赖
