@@ -1,55 +1,114 @@
 #include "solver.h"
+
 #include <algorithm>
 #include <climits>
-#include <iostream>
+#include <map>
+#include <numeric>
 
-// 实现 GreedySolver 的 solve 方法
+namespace {
+
+// 用一个有序区间集合维护单个机位已占用的时间段。
+// 由于飞机并不是按到达时间依次处理的，不能只记录最后一个离开时刻；
+// 这里使用 map<到达, 离开>，每次用前驱/后继判断是否与新区间相交。
+class StandTimeline {
+public:
+    bool available(int arrive, int depart) const {
+        auto next = intervals_.lower_bound(arrive);
+        if (next != intervals_.end() && next->first < depart) {
+            return false;
+        }
+        if (next != intervals_.begin()) {
+            auto prev = std::prev(next);
+            if (prev->second > arrive) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void add(int arrive, int depart) {
+        intervals_.emplace(arrive, depart);
+    }
+
+private:
+    std::map<int, int> intervals_;
+};
+
+}  // namespace
+
+std::string GreedySolver::getName() const {
+    if (strategy_ == GreedyStrategy::ByPassengers) {
+        return "Greedy_ByPassengers";
+    }
+    return "Greedy_ByArrival";
+}
+
 Solution GreedySolver::solve(const Case& c) {
     Solution sol;
-    sol.assign.resize(c.K, -1);
-    
-    // 记录每个机位已经被占用的时间段
-    std::vector<std::vector<std::pair<int, int>>> schedules(c.N + c.M);
-    
-    std::vector<int> pIdx(c.K);
-    for (int i = 0; i < c.K; ++i) pIdx[i] = i;
+    sol.assign.assign(c.K, -1);
 
-    // 排序策略
-    if (strategyType == 1) {
-        std::sort(pIdx.begin(), pIdx.end(), [&](int a, int b) {
-            return c.planes[a].passengers > c.planes[b].passengers;
+    if (c.K == 0) {
+        sol.feasible = true;
+        return sol;
+    }
+
+    std::vector<int> order(c.K);
+    std::iota(order.begin(), order.end(), 0);
+
+    // 两种策略的差别只在“处理飞机的顺序”上；每一步都采用相同的
+    // “在可兼容且空闲的机位中选择下机时间最小者”的贪心选择。
+    if (strategy_ == GreedyStrategy::ByPassengers) {
+        std::stable_sort(order.begin(), order.end(), [&](int a, int b) {
+            if (c.planes[a].passengers != c.planes[b].passengers) {
+                return c.planes[a].passengers > c.planes[b].passengers;
+            }
+            // 只把乘客人数作为主排序键；同人数的飞机按编号稳定处理，
+            // 避免隐式引入第二种策略的信息。
+            return a < b;
         });
     } else {
-        std::sort(pIdx.begin(), pIdx.end(), [&](int a, int b) {
-            return c.planes[a].arrive < c.planes[b].arrive;
+        std::stable_sort(order.begin(), order.end(), [&](int a, int b) {
+            if (c.planes[a].arrive != c.planes[b].arrive) {
+                return c.planes[a].arrive < c.planes[b].arrive;
+            }
+            return a < b;
         });
     }
 
-    // 分配
-    for (int i : pIdx) {
-        const auto& p = c.planes[i];
+    const int standCount = c.N + c.M;
+    std::vector<StandTimeline> timelines(standCount);
+
+    for (int planeIndex : order) {
+        const Plane& p = c.planes[planeIndex];
         int bestStand = -1;
-        int minUnloadTime = INT_MAX;
-        
-        for (int s = 0; s < c.N + c.M; ++s) {
-            const auto& stand = c.stands[s];
-            if (p.isLarge && !stand.isLarge) continue;
-            if (!isStandAvailable(schedules[s], p.arrive, p.depart)) continue;
-            
-            if (stand.unloadTime < minUnloadTime) {
-                minUnloadTime = stand.unloadTime;
+        int bestUnload = INT_MAX;
+
+        for (int s = 0; s < standCount; ++s) {
+            const Stand& stand = c.stands[s];
+
+            // 大飞机只能停大机位；小飞机可以停大机位或小机位。
+            if (p.isLarge && !stand.isLarge) {
+                continue;
+            }
+            if (!timelines[s].available(p.arrive, p.depart)) {
+                continue;
+            }
+
+            if (stand.unloadTime < bestUnload ||
+                (stand.unloadTime == bestUnload && s < bestStand)) {
+                bestUnload = stand.unloadTime;
                 bestStand = s;
             }
         }
-        
+
         if (bestStand != -1) {
-            sol.assign[i] = bestStand;
-            schedules[bestStand].push_back({p.arrive, p.depart});
+            sol.assign[planeIndex] = bestStand;
+            timelines[bestStand].add(p.arrive, p.depart);
         }
     }
-    
-    // 计算总成本
+
     sol.objective = calculateObjective(c, sol.assign);
-    sol.feasible = true;
+    sol.feasible = std::all_of(sol.assign.begin(), sol.assign.end(),
+                               [](int s) { return s != -1; });
     return sol;
 }

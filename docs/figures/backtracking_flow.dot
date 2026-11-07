@@ -1,0 +1,45 @@
+digraph backtracking {
+  graph [rankdir=TB, bgcolor="white", fontname="Noto Sans CJK SC", nodesep=0.22, ranksep=0.24, pad=0.14, size="8.6,9.2"];
+  node [shape=box, style="rounded,filled", color="#4472C4", fillcolor="#EAF0FB", fontname="Noto Sans CJK SC", fontsize=10.5, penwidth=1.1, margin="0.12,0.06"];
+  edge [color="#555555", arrowsize=0.65, fontname="Noto Sans CJK SC", fontsize=8.8];
+
+  start [shape=oval, fillcolor="#DDEBF7", label="开始"];
+  load  [label="读取并校验案例\n建立机位、飞机与兼容关系"];
+  prep  [label="预处理\n每架飞机的兼容机位与最小下机时间\n后缀下界 suffixLB[d]"];
+  order [label="飞机排序\n大飞机优先 → 可选机位少优先\n→ 乘客数降序 → 编号"];
+  greedy[label="贪心策略 1 构造初始可行解\nbestCost ← 贪心目标值"];
+  root  [shape=diamond, style="filled", fillcolor="#FFF2CC", label="根结点下界\n≥ bestCost ?"];
+  done0 [label="输出贪心解\ncomplete = true"];
+
+  dfs   [label="DFS(depth, cost)\n当前部分分配 + 各机位时间轴"];
+  limit [shape=diamond, style="filled", fillcolor="#FFF2CC", label="达到时间或\n结点上限 ?"];
+  stop  [label="输出当前最好解\ncomplete = false"];
+  leaf  [shape=diamond, style="filled", fillcolor="#FFF2CC", label="depth = K ?"];
+  upd   [label="更新 bestCost / bestAssign\n记录完整分配"];
+  prune [shape=diamond, style="filled", fillcolor="#FFF2CC", label="cost ≥ bestCost 或\ncost + suffixLB[depth] ≥ bestCost ?"];
+  cand  [label="枚举兼容且时间不冲突的机位\n按 unloadTime 升序"];
+  rec   [label="加入机位时间轴\n递归 DFS(depth+1, cost+w)"];
+  undo  [label="撤销时间轴，恢复现场"];
+  more  [shape=diamond, style="filled", fillcolor="#FFF2CC", label="还有候选机位 ?"];
+  back  [label="返回上一层"];
+  out   [label="输出 bestAssign\ncomplete = true"];
+
+  start -> load -> prep -> order -> greedy -> root;
+  root -> done0 [label=" 是"];
+  root -> dfs [label=" 否"];
+  dfs -> limit;
+  limit -> stop [label=" 是"];
+  limit -> leaf [label=" 否"];
+  leaf -> upd [label=" 是"];
+  upd -> back;
+  leaf -> prune [label=" 否"];
+  prune -> back [label=" 是"];
+  prune -> cand [label=" 否"];
+  cand -> rec -> undo -> more;
+  more -> cand [label=" 是", style=dashed, constraint=false];
+  more -> back [label=" 否"];
+  back -> dfs [label=" 上一层继续", style=dashed, constraint=false];
+  back -> out [label=" 根层结束", style=dashed, constraint=false];
+
+  { rank=same; done0; stop; out; }
+}

@@ -1,0 +1,46 @@
+digraph branch_bound {
+  graph [rankdir=TB, bgcolor="white", fontname="Noto Sans CJK SC", nodesep=0.24, ranksep=0.26, pad=0.16, size="8.8,10.4"];
+  node [shape=box, style="rounded,filled", color="#4472C4", fillcolor="#EAF0FB", fontname="Noto Sans CJK SC", fontsize=10.0, penwidth=1.1, margin="0.12,0.055"];
+  edge [color="#555555", arrowsize=0.65, fontname="Noto Sans CJK SC", fontsize=8.4];
+
+  start [shape=oval, fillcolor="#DDEBF7", label="开始"];
+  load  [label="读取并校验案例\n建立机位、飞机与兼容关系"];
+  prep  [label="预处理\n飞机排序：大飞机优先 → 兼容机位少优先\n→ 乘客数降序 → 编号\n静态后缀下界 suffixLB[d]"];
+  upper [label="双贪心初始上界\n策略 1（乘客优先）与策略 2（到达优先）\n取较优者作为 bestCost / bestAssign"];
+  dyn   [label="初始化动态可用机位下界\n对每架飞机维护兼容机位的 (下机时间, 机位)\n求当前最小可用下机时间之和 dynamicSum"];
+  root  [shape=diamond, style="filled", fillcolor="#FFF2CC", label="根下界 ≥ bestCost ?"];
+  done0 [label="直接输出贪心解\ncomplete = true，结点数 = 0"];
+
+  dfs   [label="DFS(depth, cost)\n当前部分分配 + 机位时间轴\n+ 动态可用机位集合"];
+  limit [shape=diamond, style="filled", fillcolor="#FFF2CC", label="达到时间或\n结点上限 ?"];
+  stop  [label="输出当前最好解\ncomplete = false"];
+  leaf  [shape=diamond, style="filled", fillcolor="#FFF2CC", label="depth = K ?"];
+  upd   [label="用完整分配更新 bestCost / bestAssign"];
+  prune [shape=diamond, style="filled", fillcolor="#FFF2CC", label="cost ≥ bestCost 或\ncost + lower ≥ bestCost 或\n存在无可用机位的剩余飞机 ?"];
+  cand  [label="生成兼容且时间不冲突的候选机位\n按 unloadTime 升序、机位编号升序"];
+  branch[label="选中候选机位 s\n扣掉当前飞机在动态下界中的贡献\n对后续时间重叠且兼容 s 的飞机\n从可用集合中删除 s 的下机时间"];
+  rec   [label="加入机位时间轴\n递归 DFS(depth+1, cost + passengers × unload(s))"];
+  undo  [label="撤销时间轴与动态集合\n恢复 dynamicSum 和可用机位"];
+  more  [shape=diamond, style="filled", fillcolor="#FFF2CC", label="还有候选机位 ?"];
+  back  [label="返回上一层"];
+  out   [label="输出 bestAssign\ncomplete = true"];
+
+  start -> load -> prep -> upper -> dyn -> root;
+  root -> done0 [label=" 是"];
+  root -> dfs [label=" 否"];
+  dfs -> limit;
+  limit -> stop [label=" 是"];
+  limit -> leaf [label=" 否"];
+  leaf -> upd [label=" 是"];
+  upd -> back;
+  leaf -> prune [label=" 否"];
+  prune -> back [label=" 是"];
+  prune -> cand [label=" 否"];
+  cand -> branch -> rec -> undo -> more;
+  more -> cand [label=" 是", style=dashed, constraint=false];
+  more -> back [label=" 否"];
+  back -> dfs [label=" 上一层继续", style=dashed, constraint=false];
+  back -> out [label=" 根层结束", style=dashed, constraint=false];
+
+  { rank=same; done0; stop; out; }
+}

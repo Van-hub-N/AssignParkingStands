@@ -25,7 +25,8 @@ lib/
 # ---- 案例二进制（可由 generate_cases 重建）----
 data/cases/*.bin
 # 但保留目录占位，见下方 .gitkeep 说明
-
+实验内容/
+2024*.zip
 # ---- 临时输出 ----
 dump_*.txt
 *.log
